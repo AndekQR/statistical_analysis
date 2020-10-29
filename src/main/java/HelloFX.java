@@ -5,6 +5,6 @@ public class HelloFX extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         ViewManager manager = new ViewManager();
-        manager.showMainPanel();
+        manager.showMainPanel(primaryStage);
     }
 }

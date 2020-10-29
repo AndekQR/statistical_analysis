@@ -9,15 +9,14 @@ import java.util.OptionalDouble;
 public class DataFixer {
 
     private List<MyRow> data;
-    private DataGetter dataGetter;
+    private DataGetter dataGetter; //TODO: może być problem z nieaktualnymi danymi
     private MyMath myMath;
 
 
-
     public List<MyRow> fix(final List<MyRow> dataToFix) {
-        this.data = dataToFix;
-        this.dataGetter = new DataGetter(this.data);
-        this.myMath = new MyMath();
+        this.data=dataToFix;
+        this.dataGetter=new DataGetter();
+        this.myMath=new MyMath();
 
         fixBadCellsValues();
 
@@ -27,9 +26,9 @@ public class DataFixer {
     private void fixBadCellsValues() {
         for (int i=0; i < data.size(); i++) {
             for (int i1=0; i1 < data.get(i).getCellsData().size(); i1++) {
-                Integer value = data.get(i).getCellDataValue(i1);
+                Integer value=data.get(i).getCellDataValue(i1);
                 if (value.equals(DataTypes.BAD_CELL_DATA.getValue())) {
-                    this.setNewDataCellValue(i, i1, this.getAverageOfColumn(i1));
+                    this.setNewDataCellValue(i, i1, this.getAverageOfColumn(i1, data));
                 }
             }
         }
@@ -39,11 +38,11 @@ public class DataFixer {
         this.data.get(rowNumber).getCellsData().set(columnNumber, value);
     }
 
-    private int getAverageOfColumn(int columnNumber) {
-        List<Integer> columnData=this.dataGetter.getColumnData(columnNumber);
+    private int getAverageOfColumn(int columnNumber, List<MyRow> data) {
+        List<Integer> columnData=this.dataGetter.getColumnData(columnNumber, data);
         OptionalDouble average=myMath.getAverage(columnData);
         if (average.isPresent()) {
-            return (int)Math.round(average.getAsDouble());
+            return (int) Math.round(average.getAsDouble());
         } else {
             return DataTypes.BAD_CELL_DATA.getValue();
         }
