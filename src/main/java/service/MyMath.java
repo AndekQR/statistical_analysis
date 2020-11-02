@@ -1,11 +1,16 @@
 package service;
 
 
+import helper.Quartile;
+import model.MinMaxColumns;
 import model.MyRow;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
+import org.apache.commons.math3.stat.descriptive.rank.Median;
+import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 
-import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.OptionalDouble;
 
 public class MyMath {
@@ -25,27 +30,72 @@ public class MyMath {
         return this.getAverage(dataGetter.getColumnData(columnIndex, data));
     }
 
+    private double[] toDoubles(List<Integer> data) {
+        return data.stream()
+                .mapToDouble(Integer::doubleValue)
+                .toArray();
+    }
+
     public double getStandartDevition(int columnIndex, List<MyRow> data) {
         DataGetter dataGetter = new DataGetter();
         StandardDeviation standardDeviation = new StandardDeviation();
-        double[] doubles=dataGetter.getColumnData(columnIndex, data).stream()
-                .mapToDouble(Integer::doubleValue)
-                .toArray();
+        double[] doubles= this.toDoubles(dataGetter.getColumnData(columnIndex, data));
         double evaluate=standardDeviation.evaluate(doubles);
         return this.toTwoDecimalPlaces(evaluate);
     }
-//
-//    public <T extends Number> T getAverage(List<Integer> data, Class<T> returnType) {
-//        Mean mean=new Mean();
-//        double[] doubles=data.stream()
-//                .mapToDouble(Integer::doubleValue)
-//                .toArray();
-//
-//        double average=mean.evaluate(doubles);
-//
-//        if (returnType.equals(Integer.class))
-//            return (T) (Object) Math.round(average);
-//        else if(returnType.equals(Double.class))
-//            return average;
-//    }
+
+    public Integer getMedian(int columnIndex, List<MyRow> data) {
+        DataGetter dataGetter = new DataGetter();
+        Median median = new Median();
+        double evaluate=median.evaluate(this.toDoubles(dataGetter.getColumnData(columnIndex, data)));
+        return Math.toIntExact(Math.round(evaluate));
+    }
+
+    private Integer getColumnMinValue(int columnIndex, List<MyRow> data) {
+        DataGetter dataGetter = new DataGetter();
+        List<Integer> columnData=dataGetter.getColumnData(columnIndex, data);
+        Integer min=columnData.stream()
+                .mapToInt(v -> v)
+                .min().orElseThrow(NoSuchElementException::new);
+        return min;
+    }
+
+    private Integer getColumnMaxValue(int columnIndex, List<MyRow> data) {
+        DataGetter dataGetter = new DataGetter();
+        List<Integer> columnData=dataGetter.getColumnData(columnIndex, data);
+        Integer min=columnData.stream()
+                .mapToInt(v -> v)
+                .max().orElseThrow(NoSuchElementException::new);
+        return min;
+    }
+
+    public List<MinMaxColumns> getColumnMinMax(List<String> titlies, List<MyRow> data) { //tytułów powinno być tyle ile kolumn w arkuszu
+        List<MinMaxColumns> result=new ArrayList<>();
+        for (int i=0; i < titlies.size(); i++) {
+            MinMaxColumns tmp=new MinMaxColumns();
+            tmp.setColumnName(titlies.get(i));
+            tmp.setMaxValue(this.getColumnMaxValue(i, data));
+            tmp.setMinValue(this.getColumnMinValue(i, data));
+            result.add(tmp);
+        }
+        return result;
+    }
+
+
+    public double getQuantile(double which, int columnIndex, List<MyRow> data) {
+        Percentile percentile = new Percentile();
+        DataGetter dataGetter = new DataGetter();
+        List<Integer> columnData=dataGetter.getColumnData(columnIndex, data);
+        percentile.setData(this.toDoubles(columnData));
+        if (which > 0 && which <= 100) {
+            return percentile.evaluate(which);
+        }
+        return 0D;
+    }
+
+    public double getInterquartileRange(int columnIndex, List<MyRow> data) {
+        double first=this.getQuantile(Quartile.FIRST_QUARTILE.getValue(), columnIndex, data);
+        double third=this.getQuantile(Quartile.THIRD_QUARTILE.getValue(), columnIndex, data);
+        return this.toTwoDecimalPlaces(third-first);
+    }
 }

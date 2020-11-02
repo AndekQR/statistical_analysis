@@ -55,7 +55,7 @@ public class MainController {
     }
 
     public List<MinMaxColumns> getColumnsMinMax() {
-        return dataGetter.getColumnMinMax(this.titlies, data);
+        return myMath.getColumnMinMax(this.titlies, data);
     }
 
     public double getColumnAverage(int columnIndex) {
@@ -64,5 +64,17 @@ public class MainController {
     }
     public double getStandartDeviation(int columnIndex) {
         return this.myMath.getStandartDevition(columnIndex, data);
+    }
+
+    public Integer getMedian(int columnIndex) {
+        return this.myMath.getMedian(columnIndex, this.data);
+    }
+
+    public double getQuantile(double which, int columnIndex) {
+        return this.myMath.getQuantile(which, columnIndex, this.data);
+    }
+
+    public double getInterquartileRange(int columnIndex) {
+        return this.myMath.getInterquartileRange(columnIndex, this.data);
     }
 }

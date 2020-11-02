@@ -4,7 +4,6 @@ import controller.MainController;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.*;
 import javafx.scene.text.Text;
@@ -37,19 +36,6 @@ public class MainView {
         this.container.setPrefSize(WIDTH, HEIGHT);
         this.container.setAlignment(Pos.TOP_CENTER);
 
-        String javaVersion = System.getProperty("java.version");
-        String javafxVersion = System.getProperty("javafx.version");
-        Label l = new Label("Hello, JavaFX " + javafxVersion + ", running on Java " + javaVersion + ".");
-//        this.container.getChildren().add(l);
-
-//        HBox hBox1 = new HBox();
-//        hBox1.getStyleClass().add("small-box");
-//        HBox hBox2 = new HBox();
-//        hBox2.getStyleClass().add("medium-box");
-//        HBox hBox3 = new HBox();
-//        hBox3.getStyleClass().add("big-box");
-//        this.container.getChildren().addAll(hBox1, hBox2, hBox3);
-
         this.initFileChooser();
 
         ScrollPane scrollPane = new ScrollPane(this.container);
@@ -59,7 +45,7 @@ public class MainView {
         Scene scene=new Scene(scrollPane);
         scene.getStylesheets().add(getClass().getClassLoader().getResource("style.css").toExternalForm());
         Stage stage=new Stage(StageStyle.DECORATED);
-        stage.setTitle("XmlToJson");
+        stage.setTitle("Analiza danych");
         stage.setScene(scene);
 
         stage.show();
@@ -73,7 +59,7 @@ public class MainView {
         hbox.setAlignment(Pos.CENTER);
         hbox.getStyleClass().add("small-box");
         Button button = new Button("Choose file");
-        button.setOnAction(e -> {
+        button.setOnAction(e -> { //TODO: UNCOMMENT
 //            File selectedFile = fileChooser.showOpenDialog(this.primaryStage);
 //            this.mainController.prepareData(selectedFile.getAbsolutePath());
             Future<?> future=this.mainController.prepareData("D:\\weaii\\magisterka\\semestr2\\Analiza i wizualizacja danych\\statistical_analysis\\grzyby.xlsx");
@@ -94,29 +80,29 @@ public class MainView {
 
     private void drawInterface() {
         this.container.add(this.showMinMaxValues(), 0,0, 1, 2);
-        this.container.add(this.showAverageAndDeviation(), 1,0, 1, 3);
-
-
+        this.container.add(this.medianValues(), 1, 0, 1,2);
+        this.container.add(this.showAverageAndDeviation(), 2,0, 1, 4);
+        this.container.add(this.interquartileRange(), 0, 2, 1, 1);
+        this.container.add(this.quantiles(), 1, 2, 1, 3);
     }
 
+
     private VBox showAverageAndDeviation() {
-        VBox vBox = new VBox();
-        vBox.getStyleClass().add("small-box");
+        VBox vBox = MyContainers.smollBox("Srednie i odchylenie");
 
         List<String> titlies=this.mainController.getTitlies();
         for (int i=0; i < titlies.size(); i++) {
             Text text = new Text();
             text.setText(titlies.get(i)+": \n" +
                     "Average: "+this.mainController.getColumnAverage(i)+"\n" +
-                    "Standart deviation: "+this.mainController.getStandartDeviation(i)+"\n");
+                    "Standart deviation: "+this.mainController.getStandartDeviation(i));
             vBox.getChildren().add(text);
         }
         return vBox;
     }
 
     private VBox showMinMaxValues() {
-        VBox vBox = new VBox();
-        vBox.getStyleClass().add("small-box");
+        VBox vBox = MyContainers.smollBox("Wartosci min, max");
         List<MinMaxColumns> result =this.mainController.getColumnsMinMax();
         result.forEach(o -> {
             Text text = new Text();
@@ -124,5 +110,40 @@ public class MainView {
             vBox.getChildren().add(text);
         });
        return vBox;
+    }
+
+    private VBox medianValues() {
+        VBox vbox = MyContainers.smollBox("Mediana");
+        List<String> titlies=this.mainController.getTitlies();
+        for (int i=0; i < titlies.size(); i++) {
+            Text text1  = new Text();
+            text1.setText(titlies.get(i)+": "+this.mainController.getMedian(i));
+            vbox.getChildren().add(text1);
+        }
+        return vbox;
+    }
+
+    private VBox interquartileRange() {
+        VBox vbox = MyContainers.smollBox("Rozstep miedzykwartylowy");
+        List<String> titlies=this.mainController.getTitlies();
+        for (int i=0; i < titlies.size(); i++) {
+            Text text  = new Text();
+            text.setText(titlies.get(i)+": "+this.mainController.getInterquartileRange(i));
+            vbox.getChildren().add(text);
+        }
+        return vbox;
+    }
+
+    private VBox quantiles() {
+        VBox vBox = MyContainers.smollBox("Kwartyle 0.1 i 0.9");
+        List<String> titlies=this.mainController.getTitlies();
+        for (int i=0; i < titlies.size(); i++) {
+            Text text  = new Text();
+            text.setText(titlies.get(i)+"\n" +
+                    "Kwartyl 0.1: "+this.mainController.getQuantile(10, i)+"\n" +
+                    "Kwartyl 0.9: "+this.mainController.getQuantile(90, i));
+            vBox.getChildren().add(text);
+        }
+        return vBox;
     }
 }
