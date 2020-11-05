@@ -4,14 +4,16 @@ package service;
 import helper.Quartile;
 import model.MinMaxColumns;
 import model.MyRow;
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
+import org.apache.commons.math3.stat.regression.GLSMultipleLinearRegression;
+import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.OptionalDouble;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class MyMath {
 
@@ -30,7 +32,7 @@ public class MyMath {
         return this.getAverage(dataGetter.getColumnData(columnIndex, data));
     }
 
-    private double[] toDoubles(List<Integer> data) {
+    public double[] toDoubles(List<Integer> data) {
         return data.stream()
                 .mapToDouble(Integer::doubleValue)
                 .toArray();
@@ -98,4 +100,33 @@ public class MyMath {
         double third=this.getQuantile(Quartile.THIRD_QUARTILE.getValue(), columnIndex, data);
         return this.toTwoDecimalPlaces(third-first);
     }
+
+    public double getPearsonColleration(int columnOne, int columnTwo, List<MyRow> data) {
+        DataGetter dataGetter = new DataGetter();
+        double[] columnOneData=this.toDoubles(dataGetter.getColumnData(columnOne, data));
+        double[] columnTwoData=this.toDoubles(dataGetter.getColumnData(columnTwo, data));
+
+        PearsonsCorrelation pearsonsCorrelation = new PearsonsCorrelation();
+        double correlation=pearsonsCorrelation.correlation(columnOneData, columnTwoData);
+        if (Double.isNaN(correlation)) correlation = 0;
+        return this.toTwoDecimalPlaces(correlation);
+    }
+
+    public Integer getMax(List<MyRow> data){
+        Integer max=data.stream()
+                .flatMap(e -> e.getCellsData().stream())
+                .max(Integer::compareTo)
+                .orElseThrow(RuntimeException::new);
+        return max;
+    }
+
+    public Integer getMin(List<MyRow> data){
+        Integer min=data.stream()
+                .flatMap(e -> e.getCellsData().stream())
+                .min(Integer::compareTo)
+                .orElseThrow(RuntimeException::new);
+        return min;
+    }
+
+
 }
