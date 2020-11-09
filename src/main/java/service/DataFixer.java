@@ -9,7 +9,7 @@ import java.util.OptionalDouble;
 public class DataFixer {
 
     private List<MyRow> data;
-    private DataGetter dataGetter; //TODO: może być problem z nieaktualnymi danymi
+    private DataGetter dataGetter;
     private MyMath myMath;
 
 

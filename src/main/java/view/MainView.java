@@ -14,42 +14,31 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import model.Colleration;
 import model.MinMaxColumns;
-import org.charts.dataviewer.api.config.DataViewerConfiguration;
-import org.charts.dataviewer.api.data.PlotData;
-import org.charts.dataviewer.api.trace.HistogramTrace;
-import org.charts.dataviewer.api.trace.LineTrace;
-import org.charts.dataviewer.api.trace.ScatterTrace;
-import org.charts.dataviewer.javafx.JavaFxDataViewer;
-import org.charts.dataviewer.utils.TraceType;
-import org.charts.dataviewer.utils.TraceVisibility;
+import org.apache.commons.math3.stat.regression.RegressionResults;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.CategoryAxis;
-import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.fx.ChartViewer;
-import org.jfree.chart.plot.CategoryPlot;
-import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.category.BoxAndWhiskerRenderer;
-import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
-import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.function.LineFunction2D;
 import org.jfree.data.general.DatasetUtilities;
-import org.jfree.data.statistics.BoxAndWhiskerXYDataset;
 import org.jfree.data.statistics.DefaultBoxAndWhiskerCategoryDataset;
-import org.jfree.data.statistics.DefaultBoxAndWhiskerXYDataset;
+import org.jfree.data.statistics.HistogramDataset;
 import org.jfree.data.statistics.Regression;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
 import java.awt.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class MainView {
 
@@ -96,9 +85,9 @@ public class MainView {
         hbox.getStyleClass().add("small-box");
         Button button=new Button("Choose file");
         button.setOnAction(e -> { //TODO: UNCOMMENT
-//            File selectedFile = fileChooser.showOpenDialog(this.primaryStage);
-//            this.mainController.prepareData(selectedFile.getAbsolutePath());
-            Future<?> future=this.mainController.prepareData("D:\\weaii\\magisterka\\semestr2\\Analiza i wizualizacja danych\\statistical_analysis\\grzyby.xlsx");
+            File selectedFile=fileChooser.showOpenDialog(this.primaryStage);
+            Future<?> future=this.mainController.prepareData(selectedFile.getAbsolutePath());
+//            Future<?> future=this.mainController.prepareData("D:\\weaii\\magisterka\\semestr2\\Analiza i wizualizacja danych\\statistical_analysis\\grzyby.xlsx");
             this.container.getChildren().clear();
             try {
                 future.get();
@@ -120,13 +109,24 @@ public class MainView {
         this.container.add(this.showAverageAndDeviation(), 2, 0, 1, 7);
 
         this.container.add(this.interquartileRange(), 0, 2, 1, 3);
-        this.container.add(this.quantiles(), 1, 3, 1, 8);
+        this.container.add(this.quantiles(), 1, 3, 1, 9);
 
-        this.container.add(this.collerationTable(), 0, 11, 3, 6);
-        this.container.add(this.attributesValueChart(), 0, 17, 3, 6);
-        this.container.add(this.attributesValuesHistogram(), 0, 23, 3, 5);
-        this.container.add(this.scatterPlotJFree(), 0, 28, 3, 5);
-        this.container.add(this.boxPlot(), 0, 32, 3, 5);
+        VBox vBox=new VBox();
+        vBox.getChildren().addAll(this.collerationTable(), this.attributesValueChart(), this.attributesValuesHistogram(), this.boxPlot(), this.scatterPlotJFree());
+        this.container.add(vBox, 0, 13, 3, 30);
+
+
+    }
+
+    private VBox regressionResults() {
+        List<String> titlies=this.mainController.getTitlies();
+        RegressionResults regression=this.mainController.regression(3, 4);
+        VBox vBox=MyContainers.smollBox("Regresja: " + titlies.get(3) + " - " + titlies.get(4));
+
+        Text text=new Text();
+//        text.setText(regression.);
+
+        return vBox;
     }
 
 
@@ -217,29 +217,27 @@ public class MainView {
 
         List<String> titlies=this.mainController.getTitlies();
 
-        JavaFxDataViewer dataViewer=new JavaFxDataViewer();
-        DataViewerConfiguration config=new DataViewerConfiguration();
-        config.setPlotTitle("Wykres prezentujacy rozklad wartosci zmiennych");
-        config.setxAxisTitle("rekord*60");
-        config.setyAxisTitle("wartosc zmiennej");
-        dataViewer.updateConfiguration(config);
-
-        PlotData plotData=new PlotData();
-
-        for (int i=0; i < titlies.size(); i++) {
-            LineTrace<Double> doubleLineTrace=new LineTrace<>();
-            doubleLineTrace.setTraceVisibility(TraceVisibility.LEGENDONLY);
+        XYSeriesCollection dataset=new XYSeriesCollection();
+        for (int i=1; i < titlies.size() / 2; i++) {
             List<Integer> columnData=this.mainController.getColumnData(i);
-            doubleLineTrace.setTraceName(titlies.get(i));
-            doubleLineTrace.setxArray(this.mainController.getSquenceToDataSize());
-            doubleLineTrace.setyArray(mainController.toDouble(columnData));
-            doubleLineTrace.setTraceType(TraceType.LINE);
-            plotData.addAll(doubleLineTrace);
+            Map<Integer, Long> collect=columnData.stream()
+                    .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
+
+            XYSeries series=new XYSeries(titlies.get(i));
+            for (int i1=0; i1 < columnData.size(); i1++) {
+                series.add(columnData.get(i1), collect.get(columnData.get(i1)));
+            }
+            dataset.addSeries(series);
         }
-        dataViewer.updatePlot(plotData);
 
-        vBox.getChildren().add(dataViewer);
+        JFreeChart chart=ChartFactory.createXYLineChart("Wykres prezentujacy rozklad wartosci zmiennych",
+                "wartosc argumentow", "Ilosc argumentow", dataset, PlotOrientation.HORIZONTAL, true, true, false);
 
+
+        ChartViewer chartViewer=new ChartViewer(chart);
+        chartViewer.setPrefHeight(600);
+        chartViewer.setPrefWidth(300);
+        vBox.getChildren().add(chartViewer);
         return vBox;
     }
 
@@ -247,28 +245,19 @@ public class MainView {
         VBox vBox=MyContainers.bigBox("Histogram prezentujacy wartosci zmiennych");
         List<String> titlies=this.mainController.getTitlies();
 
-        JavaFxDataViewer dataViewer=new JavaFxDataViewer();
-        DataViewerConfiguration config=new DataViewerConfiguration();
-        config.setPlotTitle("Wykres prezentujacy rozklad wartosci zmiennych");
-        config.setxAxisTitle("wartosc zmiennej");
-        config.setyAxisTitle("liczba");
-        dataViewer.updateConfiguration(config);
-
-        PlotData plotData=new PlotData();
-
-        for (int i=0; i < titlies.size(); i++) {
-            HistogramTrace<Double> his=new HistogramTrace<>();
-            his.setTraceVisibility(TraceVisibility.LEGENDONLY);
+        HistogramDataset histogramDataset=new HistogramDataset();
+        for (int i=1; i < titlies.size()/4; i++) {
             List<Integer> columnData=this.mainController.getColumnData(i);
-            his.setTraceName(titlies.get(i));
-            his.setxArray(this.mainController.toDouble(columnData));
-            his.setyArray(this.mainController.getMinToMaxSequence());
-            plotData.addAll(his);
+            histogramDataset.addSeries(titlies.get(i), this.mainController.toDoublePrimitives(columnData), 500);
         }
 
-        dataViewer.updatePlot(plotData);
+        JFreeChart histogram=ChartFactory.createHistogram("Histogram prezentujacy wartosci zmiennych",
+                "y values", "x values", histogramDataset, PlotOrientation.HORIZONTAL, true, true, false);
 
-        vBox.getChildren().add(dataViewer);
+        ChartViewer chartViewer=new ChartViewer(histogram);
+        chartViewer.setPrefHeight(600);
+        chartViewer.setPrefWidth(300);
+        vBox.getChildren().add(chartViewer);
         return vBox;
     }
 
@@ -283,7 +272,6 @@ public class MainView {
         double[] doubles1=mainController.toDoublePrimitives(this.mainController.getColumnData(2));
 
 
-
         for (int i=0; i < doubles.length; i++) {
             series.add(doubles[i], doubles1[i]);
         }
@@ -291,11 +279,11 @@ public class MainView {
         JFreeChart chart=ChartFactory.createScatterPlot("rozrzut", titlies.get(1), titlies.get(2), resul, PlotOrientation.HORIZONTAL, false, true, false);
 
         double[] olsRegression=Regression.getOLSRegression(resul, 0);
-        LineFunction2D lineFunction2D = new LineFunction2D(olsRegression[0], olsRegression[1]);
-        XYDataset dataset =DatasetUtilities.sampleFunction2D(lineFunction2D, 0D, 8, 50, "linia regresji");
+        LineFunction2D lineFunction2D=new LineFunction2D(olsRegression[0], olsRegression[1]);
+        XYDataset dataset=DatasetUtilities.sampleFunction2D(lineFunction2D, 0D, 8, 50, "linia regresji");
         XYPlot xyPlot=chart.getXYPlot();
         xyPlot.setDataset(1, dataset);
-        XYLineAndShapeRenderer xylineandshaperenderer = new XYLineAndShapeRenderer(
+        XYLineAndShapeRenderer xylineandshaperenderer=new XYLineAndShapeRenderer(
                 true, false);
         xylineandshaperenderer.setSeriesPaint(0, Color.YELLOW);
         xyPlot.setRenderer(1, xylineandshaperenderer);
@@ -313,26 +301,12 @@ public class MainView {
         List<String> titlies=this.mainController.getTitlies();
 
         DefaultBoxAndWhiskerCategoryDataset dataset=new DefaultBoxAndWhiskerCategoryDataset();
-        for (int i=0; i < titlies.size()/4; i++) {
+        for (int i=1; i < titlies.size() / 2; i++) {
             List<Integer> columnData=this.mainController.getColumnData(i);
-            dataset.add(columnData, titlies.get(i), "type: "+i);
+            dataset.add(columnData, titlies.get(i), "type: " + i);
 
         }
-//        BoxAndWhiskerRenderer boxRenderer = new BoxAndWhiskerRenderer();
-//        DefaultCategoryDataset catData = new DefaultCategoryDataset();
-//        catData.addValue(dataset.getMeanValue(0, 0), "Mean", dataset.getColumnKey(0));
-//        catData.addValue(dataset.getMeanValue(0, 1), "Mean", dataset.getColumnKey(1));
-//        LineAndShapeRenderer lineRenderer = new LineAndShapeRenderer();
-//        CategoryAxis xAxis = new CategoryAxis("Type");
-//        NumberAxis yAxis = new NumberAxis("Value");
-//        yAxis.setAutoRangeIncludesZero(false);
-//        CategoryPlot plot = new CategoryPlot(dataset, xAxis, yAxis, boxRenderer);
-//        plot.setDataset(1, catData);
-//        plot.setRenderer(1, lineRenderer);
-//        plot.setDatasetRenderingOrder(DatasetRenderingOrder.FORWARD);
-//
-//        JFreeChart chart = new JFreeChart("test", JFreeChart.DEFAULT_TITLE_FONT, plot, true);
-        JFreeChart chart = ChartFactory.createBoxAndWhiskerChart("box", "category", "value", dataset, true);
+        JFreeChart chart=ChartFactory.createBoxAndWhiskerChart("box", "category", "value", dataset, true);
         ChartViewer chartViewer=new ChartViewer(chart);
         chartViewer.setPrefHeight(600);
         chartViewer.setPrefWidth(300);

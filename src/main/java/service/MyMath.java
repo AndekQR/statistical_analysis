@@ -8,12 +8,13 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
-import org.apache.commons.math3.stat.regression.GLSMultipleLinearRegression;
-import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
+import org.apache.commons.math3.stat.regression.RegressionResults;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
-import java.util.*;
-import java.util.stream.Stream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.OptionalDouble;
 
 public class MyMath {
 
@@ -24,11 +25,11 @@ public class MyMath {
     }
 
     public double toTwoDecimalPlaces(double value) {
-        return Math.floor(value * 100)/100;
+        return Math.floor(value * 100) / 100;
     }
 
     public OptionalDouble getAverageOfColumnValues(int columnIndex, List<MyRow> data) {
-        DataGetter dataGetter = new DataGetter();
+        DataGetter dataGetter=new DataGetter();
         return this.getAverage(dataGetter.getColumnData(columnIndex, data));
     }
 
@@ -39,22 +40,22 @@ public class MyMath {
     }
 
     public double getStandartDevition(int columnIndex, List<MyRow> data) {
-        DataGetter dataGetter = new DataGetter();
-        StandardDeviation standardDeviation = new StandardDeviation();
-        double[] doubles= this.toDoubles(dataGetter.getColumnData(columnIndex, data));
+        DataGetter dataGetter=new DataGetter();
+        StandardDeviation standardDeviation=new StandardDeviation();
+        double[] doubles=this.toDoubles(dataGetter.getColumnData(columnIndex, data));
         double evaluate=standardDeviation.evaluate(doubles);
         return this.toTwoDecimalPlaces(evaluate);
     }
 
     public Integer getMedian(int columnIndex, List<MyRow> data) {
-        DataGetter dataGetter = new DataGetter();
-        Median median = new Median();
+        DataGetter dataGetter=new DataGetter();
+        Median median=new Median();
         double evaluate=median.evaluate(this.toDoubles(dataGetter.getColumnData(columnIndex, data)));
         return Math.toIntExact(Math.round(evaluate));
     }
 
     private Integer getColumnMinValue(int columnIndex, List<MyRow> data) {
-        DataGetter dataGetter = new DataGetter();
+        DataGetter dataGetter=new DataGetter();
         List<Integer> columnData=dataGetter.getColumnData(columnIndex, data);
         Integer min=columnData.stream()
                 .mapToInt(v -> v)
@@ -63,7 +64,7 @@ public class MyMath {
     }
 
     private Integer getColumnMaxValue(int columnIndex, List<MyRow> data) {
-        DataGetter dataGetter = new DataGetter();
+        DataGetter dataGetter=new DataGetter();
         List<Integer> columnData=dataGetter.getColumnData(columnIndex, data);
         Integer min=columnData.stream()
                 .mapToInt(v -> v)
@@ -85,8 +86,8 @@ public class MyMath {
 
 
     public double getQuantile(double which, int columnIndex, List<MyRow> data) {
-        Percentile percentile = new Percentile();
-        DataGetter dataGetter = new DataGetter();
+        Percentile percentile=new Percentile();
+        DataGetter dataGetter=new DataGetter();
         List<Integer> columnData=dataGetter.getColumnData(columnIndex, data);
         percentile.setData(this.toDoubles(columnData));
         if (which > 0 && which <= 100) {
@@ -98,21 +99,21 @@ public class MyMath {
     public double getInterquartileRange(int columnIndex, List<MyRow> data) {
         double first=this.getQuantile(Quartile.FIRST_QUARTILE.getValue(), columnIndex, data);
         double third=this.getQuantile(Quartile.THIRD_QUARTILE.getValue(), columnIndex, data);
-        return this.toTwoDecimalPlaces(third-first);
+        return this.toTwoDecimalPlaces(third - first);
     }
 
     public double getPearsonColleration(int columnOne, int columnTwo, List<MyRow> data) {
-        DataGetter dataGetter = new DataGetter();
+        DataGetter dataGetter=new DataGetter();
         double[] columnOneData=this.toDoubles(dataGetter.getColumnData(columnOne, data));
         double[] columnTwoData=this.toDoubles(dataGetter.getColumnData(columnTwo, data));
 
-        PearsonsCorrelation pearsonsCorrelation = new PearsonsCorrelation();
+        PearsonsCorrelation pearsonsCorrelation=new PearsonsCorrelation();
         double correlation=pearsonsCorrelation.correlation(columnOneData, columnTwoData);
-        if (Double.isNaN(correlation)) correlation = 0;
+        if (Double.isNaN(correlation)) correlation=0;
         return this.toTwoDecimalPlaces(correlation);
     }
 
-    public Integer getMax(List<MyRow> data){
+    public Integer getMax(List<MyRow> data) {
         Integer max=data.stream()
                 .flatMap(e -> e.getCellsData().stream())
                 .max(Integer::compareTo)
@@ -120,7 +121,7 @@ public class MyMath {
         return max;
     }
 
-    public Integer getMin(List<MyRow> data){
+    public Integer getMin(List<MyRow> data) {
         Integer min=data.stream()
                 .flatMap(e -> e.getCellsData().stream())
                 .min(Integer::compareTo)
@@ -128,5 +129,16 @@ public class MyMath {
         return min;
     }
 
+    public RegressionResults regression(int columnOne, int columnTwo, List<MyRow> data) {
+        SimpleRegression regression = new SimpleRegression();
+        DataGetter dataGetter=new DataGetter();
+        double[] columnOneData=this.toDoubles(dataGetter.getColumnData(columnOne, data));
+        double[] columnTwoData=this.toDoubles(dataGetter.getColumnData(columnTwo, data));
+
+        for (int i=0; i < data.size(); i++) {
+            regression.addData(columnOneData[i], columnTwoData[i]);
+        }
+        return regression.regress();
+    }
 
 }
