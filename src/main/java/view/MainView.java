@@ -14,7 +14,9 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import model.Colleration;
 import model.MinMaxColumns;
+import model.MyPoint;
 import org.apache.commons.math3.stat.regression.RegressionResults;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.fx.ChartViewer;
@@ -84,7 +86,7 @@ public class MainView {
         hbox.setAlignment(Pos.CENTER);
         hbox.getStyleClass().add("small-box");
         Button button=new Button("Choose file");
-        button.setOnAction(e -> { //TODO: UNCOMMENT
+        button.setOnAction(e -> {
             File selectedFile=fileChooser.showOpenDialog(this.primaryStage);
             Future<?> future=this.mainController.prepareData(selectedFile.getAbsolutePath());
 //            Future<?> future=this.mainController.prepareData("D:\\weaii\\magisterka\\semestr2\\Analiza i wizualizacja danych\\statistical_analysis\\grzyby.xlsx");
@@ -111,6 +113,10 @@ public class MainView {
         this.container.add(this.interquartileRange(), 0, 2, 1, 3);
         this.container.add(this.quantiles(), 1, 3, 1, 9);
 
+        this.container.add(this.regressionResults(), 0, 5, 1, 1);
+
+        this.container.add(this.awayPoints(), 0, 6, 1, 2);
+
         VBox vBox=new VBox();
         vBox.getChildren().addAll(this.collerationTable(), this.attributesValueChart(), this.attributesValuesHistogram(), this.boxPlot(), this.scatterPlotJFree());
         this.container.add(vBox, 0, 13, 3, 30);
@@ -120,11 +126,14 @@ public class MainView {
 
     private VBox regressionResults() {
         List<String> titlies=this.mainController.getTitlies();
-        RegressionResults regression=this.mainController.regression(3, 4);
-        VBox vBox=MyContainers.smollBox("Regresja: " + titlies.get(3) + " - " + titlies.get(4));
+        SimpleRegression regression=this.mainController.regression(1, 2);
+        VBox vBox=MyContainers.smollBox("Regresja: " + titlies.get(1) + " - " + titlies.get(2));
+
 
         Text text=new Text();
-//        text.setText(regression.);
+        text.setText("Wzor prostej: \n" +
+                "y = x * "+mainController.toTwoDecimalPlaces(regression.getSlope())+" + "+mainController.toTwoDecimalPlaces(regression.getIntercept()));
+        vBox.getChildren().add(text);
 
         return vBox;
     }
@@ -196,7 +205,6 @@ public class MainView {
         List<Colleration> result=new ArrayList<>();
         for (int i=0; i < titlies.size(); i++) {
             Colleration colleration=new Colleration();
-//            Map<String, Double> collerTo = new HashMap<>();
             List<Double> collerTo=new ArrayList<>();
             colleration.setPropertyName(titlies.get(i));
             for (int i1=0; i1 < titlies.size(); i1++) {
@@ -278,7 +286,7 @@ public class MainView {
         resul.addSeries(series);
         JFreeChart chart=ChartFactory.createScatterPlot("rozrzut", titlies.get(1), titlies.get(2), resul, PlotOrientation.HORIZONTAL, false, true, false);
 
-        double[] olsRegression=Regression.getOLSRegression(resul, 0);
+        double[] olsRegression=Regression.getPowerRegression(resul, 0);
         LineFunction2D lineFunction2D=new LineFunction2D(olsRegression[0], olsRegression[1]);
         XYDataset dataset=DatasetUtilities.sampleFunction2D(lineFunction2D, 0D, 8, 50, "linia regresji");
         XYPlot xyPlot=chart.getXYPlot();
@@ -311,6 +319,33 @@ public class MainView {
         chartViewer.setPrefHeight(600);
         chartViewer.setPrefWidth(300);
         vBox.getChildren().add(chartViewer);
+
+        return vBox;
+    }
+
+    private VBox awayPoints() {
+        VBox vBox = MyContainers.smollBox("Punkty oddalone");
+        List<String> titlies=this.mainController.getTitlies();
+
+        Text text = new Text();
+        text.setText("Punkty oddalone w "+titlies.get(1));
+        vBox.getChildren().add(text);
+
+        List<MyPoint> awayPoints=this.mainController.getAwayPoints(1);
+        if(awayPoints.isEmpty()) {
+            Text text1 = new Text();
+            text1.setText("Brak punktow oddalonych");
+            vBox.getChildren().add(text1);
+        } else {
+            for (MyPoint tmp : awayPoints) {
+                Text text2 = new Text();
+                text2.setText("kolumna: " + tmp.getColumnIndex() + "\n" +
+                        "wiersz: " + tmp.getRowIndex() + "\n" +
+                        "wartosc: " + tmp.getValue());
+                vBox.getChildren().add(text2);
+            }
+        }
+
 
         return vBox;
     }

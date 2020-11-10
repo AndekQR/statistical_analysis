@@ -3,12 +3,12 @@ package service;
 
 import helper.Quartile;
 import model.MinMaxColumns;
+import model.MyPoint;
 import model.MyRow;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
-import org.apache.commons.math3.stat.regression.RegressionResults;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
 import java.util.ArrayList;
@@ -129,7 +129,7 @@ public class MyMath {
         return min;
     }
 
-    public RegressionResults regression(int columnOne, int columnTwo, List<MyRow> data) {
+    public SimpleRegression regression(int columnOne, int columnTwo, List<MyRow> data) {
         SimpleRegression regression = new SimpleRegression();
         DataGetter dataGetter=new DataGetter();
         double[] columnOneData=this.toDoubles(dataGetter.getColumnData(columnOne, data));
@@ -138,7 +138,32 @@ public class MyMath {
         for (int i=0; i < data.size(); i++) {
             regression.addData(columnOneData[i], columnTwoData[i]);
         }
-        return regression.regress();
+        return regression;
+    }
+
+    public List<MyPoint> getAwayPoints(int columnIndex, List<MyRow> data) {
+        double interquartileRange=this.getInterquartileRange(columnIndex, data);
+        double firstQuartile=this.getQuantile(Quartile.FIRST_QUARTILE.getValue(), columnIndex, data);
+        double thirdQuartile=this.getQuantile(Quartile.THIRD_QUARTILE.getValue(), columnIndex, data);
+
+        double min=firstQuartile - (1.5 * interquartileRange);
+        double max=thirdQuartile + (1.5 * interquartileRange);
+
+        DataGetter dataGetter = new DataGetter();
+        List<Integer> columnData=dataGetter.getColumnData(columnIndex, data);
+        List<MyPoint> result = new ArrayList<>();
+
+        for (int i=0; i < columnData.size(); i++) {
+            Integer tmp=columnData.get(i);
+            if(tmp < min || tmp > max) {
+                MyPoint myPoint = new MyPoint();
+                myPoint.setColumnIndex(columnIndex);
+                myPoint.setRowIndex(i);
+                myPoint.setValue(tmp.doubleValue());
+                result.add(myPoint);
+            }
+        }
+        return result;
     }
 
 }

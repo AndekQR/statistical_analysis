@@ -1,21 +1,20 @@
 package controller;
 
 import model.MinMaxColumns;
+import model.MyPoint;
 import model.MyRow;
 import model.WorkbookData;
-import org.apache.commons.math3.stat.regression.RegressionResults;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import service.DataFixer;
 import service.DataGetter;
 import service.ExcelParser;
 import service.MyMath;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
 public class MainController {
@@ -99,15 +98,6 @@ public class MainController {
                 .boxed()
                 .toArray(Double[]::new);
 
-//        List<Double> array = new ArrayList<>();
-//        int min=myMath.getMin(this.data);
-//        int max=myMath.getMax(this.data);
-//        double current = 0D;s
-//        while (current < max) {
-//            array.add(current);
-//            current += 0.1;
-//        }
-//        return array.toArray(Double[]::new);
     }
 
     public Double[] getSquenceToDataSize() {
@@ -129,9 +119,16 @@ public class MainController {
         return this.myMath.toDoubles(data);
     }
 
-    public RegressionResults regression(int columnOne, int columnTwo) {
+    public SimpleRegression regression(int columnOne, int columnTwo) {
         return this.myMath.regression(columnOne, columnTwo, this.data);
     }
 
+    public double toTwoDecimalPlaces(double value) {
+        return this.myMath.toTwoDecimalPlaces(value);
+    }
+
+    public List<MyPoint> getAwayPoints(int columnIndex) {
+        return myMath.getAwayPoints(columnIndex, this.data);
+    }
 
 }
